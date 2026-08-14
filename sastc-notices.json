@@ -2,7 +2,7 @@
   {
     "id": "sastc-001",
     "title": "Welcome to SASTC Portal",
-    "desc": "Important guidelines and updates for CSE students and faculty members. Classes will resume strictly on schedule.",
+    "desc": "Important guidelines and updates for <b>CSE</b> students. <img src='https://placehold.co/400x150' alt='Banner' style='margin-top:8px; border-radius:8px;'/>",
     "date": "August 13, 2026",
     "isResult": false,
     "pdfUrl": "",
@@ -11,8 +11,8 @@
   {
     "id": "sastc-002",
     "title": "Annual Sports Event Registration",
-    "desc": "Please register your names for the upcoming annual sports event with your respective department heads by August 20th.Please register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20thPlease register your names for the upcoming annual sports event with your respective department heads by August 20th",
-    "date": "August 10, 2026",
+    "desc": "Please register your names for the upcoming annual sports event with your respective department heads by August 20th. <br><br> For details, <a href='https://example.com/sports' target='_blank'>check the official sports page</a>.",
+    "date": "August 12, 2026",
     "isResult": false,
     "pdfUrl": "",
     "deptCode": "SASTC"
@@ -20,17 +20,17 @@
   {
     "id": "sastc-003",
     "title": "Agriculture Field Trip Notification",
-    "desc": "All AG department students are requested to gather at the main gate for the scheduled field trip to the research farm.",
-    "date": "August 14, 2026",
+    "desc": "All <b>B.Sc in Agriculture</b> students are requested to gather at the main gate for the scheduled field trip to the research farm. <a href='https://example.com/ag-trip'>Field Trip Guide</a>",
+    "date": "August 11, 2026",
     "isResult": false,
     "pdfUrl": "",
-    "deptCode": "AG"
+    "deptCode": "AG_BSC"
   },
   {
     "id": "sastc-004",
     "title": "BBA Case Study Competition",
     "desc": "The annual business case study competition will be held next week. Interested BBA students must form teams of three.",
-    "date": "August 15, 2026",
+    "date": "August 09, 2026",
     "isResult": false,
     "pdfUrl": "",
     "deptCode": "BBA"
@@ -39,7 +39,7 @@
     "id": "sastc-005",
     "title": "Campus Cleanliness Drive",
     "desc": "Join the SASTC campus cleanliness drive this weekend. Open to all departments.",
-    "date": "August 16, 2026",
+    "date": "August 05, 2026",
     "isResult": false,
     "pdfUrl": "",
     "deptCode": "SASTC"
