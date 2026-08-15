@@ -163,7 +163,7 @@ function renderHomeView() {
     if (heroDate) heroDate.innerHTML = `<i class="fa-regular fa-clock"></i> ${heroItem.date || 'Recent'}`;
 
     if (heroBtnView) {
-      const url = formatPdfUrl(heroItem.url || heroItem.pdf_url || "#");
+      const url = formatPdfUrl(heroItem.pdf || heroItem.url || heroItem.pdf_url || heroItem.link || heroItem.pdfUrl || "#");
       heroBtnView.onclick = (e) => {
         triggerHaptic();
         handleNoticeClick(e, url, heroItem.title);
@@ -285,7 +285,7 @@ function createCardHTML(item, options = {}) {
   const displayBadge = isResult ? "RESULT" : (item._deptCode || detectDeptCode(`${item.department || ''} ${item.title || ''}`));
   const deptIcon = getDeptIcon(displayBadge);
 
-  const rawLink = item.url || item.pdf_url || item.link || item.pdfUrl || "";
+  const rawLink = item.pdf || item.url || item.pdf_url || item.link || item.pdfUrl || "";
   const isTextOnly = !rawLink || rawLink === "#";
   const pdfUrl = isTextOnly ? "#" : formatPdfUrl(rawLink);
   
@@ -363,7 +363,6 @@ function initEventListeners() {
       if (e.target === pdfModal) closePdfModal();
     });
   }
-
 
   const bottomNav = document.querySelector(".bottom-nav");
   let lastScrollY = window.scrollY;
