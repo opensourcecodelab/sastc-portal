@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSTU Notice Board</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f6f9; color: #333; }
+        .header { text-align: center; margin-bottom: 25px; }
+        h1 { color: #003366; margin-bottom: 10px; }
+        .nav { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        .nav a { text-decoration: none; font-weight: bold; color: #003366; padding: 6px 12px; border-radius: 4px; border: 1px solid #003366; }
+        .nav a.active { background-color: #003366; color: #fff; }
+        .filters { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; }
+        .filter-btn { padding: 8px 16px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 20px; font-weight: 500; transition: all 0.2s; }
+        .filter-btn.active, .filter-btn:hover { background: #003366; color: white; border-color: #003366; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .notice-card { background: white; padding: 18px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #003366; display: flex; flex-direction: column; gap: 8px; }
+        .notice-title { font-size: 16px; font-weight: 600; color: #1a0dab; text-decoration: none; line-height: 1.4; }
+        .notice-title:hover { text-decoration: underline; color: #0056b3; }
+        .notice-meta { font-size: 13px; color: #666; display: flex; align-items: center; gap: 10px; }
+        .badge { padding: 3px 8px; font-size: 11px; font-weight: bold; background: #e8f0fe; color: #003366; border-radius: 4px; }
+        .empty-msg { text-align: center; padding: 40px; color: #777; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>HSTU Notice Board</h1>
+        <div class="nav">
+            <a href="index.html" class="active">Notices</a>
+            <a href="exam_result.html">Exam Results</a>
+        </div>
+    </div>
+
+    <div class="filters">
+        <button class="filter-btn active" onclick="filterCategory('all', this)">All</button>
+        <button class="filter-btn" onclick="filterCategory('cse', this)">CSE</button>
+        <button class="filter-btn" onclick="filterCategory('agriculture', this)">Agriculture</button>
+        <button class="filter-btn" onclick="filterCategory('bba', this)">BBA</button>
+    </div>
+
+    <div class="container" id="notice-container">
+        <div class="empty-msg">Loading notices...</div>
+    </div>
+
+    <script>
+        let allNotices = [];
+
+        async function loadNotices() {
+            try {
+                const response = await fetch('notices.json?v=' + new Date().getTime());
+                allNotices = await response.json();
+                renderNotices(allNotices);
+            } catch (error) {
+                console.error("Error loading notices:", error);
+                document.getElementById('notice-container').innerHTML = '<div class="empty-msg">Unable to load notices. Please try again later.</div>';
+            }
+        }
+
+        function renderNotices(notices) {
+            const container = document.getElementById('notice-container');
+            if (!notices || notices.length === 0) {
+                container.innerHTML = '<div class="empty-msg">No notices available for this section.</div>';
+                return;
+            }
+
+            container.innerHTML = notices.map(item => `
+                <div class="notice-card">
+                    <a class="notice-title" href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
+                    <div class="notice-meta">
+                        <span class="badge">${item.category || 'General'}</span>
+                        <span>Date: ${item.date}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterCategory(category, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (category === 'all') {
+                renderNotices(allNotices);
+            } else {
+                const filtered = allNotices.filter(n => 
+                    n.category && n.category.toLowerCase() === category.toLowerCase()
+                );
+                renderNotices(filtered);
+            }
+        }
+
+        loadNotices();
+    </script>
+</body>
+</html>
