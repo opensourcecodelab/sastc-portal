@@ -142,20 +142,23 @@ export async function shareLink(url, title = "SASTC Notice") {
     return;
   }
   
+  const appUrl = window.location.href.split('#')[0];
+  const shareText = `📌 ${title}\n\n📄 Document Link: ${url}\n\n🌐 Shared via SASTC Portal:\n${appUrl}`;
+
   if (navigator.share) {
     try {
       await navigator.share({
         title: title,
-        url: url
+        text: shareText
       });
       showToast("Link shared successfully!", "fa-circle-check");
     } catch (err) {
       if (err.name !== 'AbortError') {
-         copyLink(url);
+         copyLink(shareText);
       }
     }
   } else {
-    copyLink(url);
+    copyLink(shareText);
   }
 }
 
