@@ -15,7 +15,8 @@ import {
   escapeJS, 
   formatPdfUrl, 
   closePdfModal, 
-  copyLink, 
+  copyLink,
+  shareLink,
   handleNoticeClick, 
   handlePdfView, 
   debounce,
@@ -28,10 +29,14 @@ import {
 window.handleNoticeClick = handleNoticeClick;
 window.handlePdfView = handlePdfView;
 window.copyLink = copyLink;
+window.shareLink = shareLink;
 
 // Storage Keys
 const LS_ACTIVE_DEPT = "sastc_active_dept";
 const LS_DEPT_PREF = "sastc_dept_preference";
+const LS_NOTIFICATIONS_ENABLED = "sastc_notifications_enabled";
+const LS_SEEN_NOTICES_COUNT = "sastc_seen_notices_count";
+const LS_SEEN_RESULTS_COUNT = "sastc_seen_results_count";
 
 // State variables
 let activeDept = localStorage.getItem(LS_ACTIVE_DEPT) || "ALL";
@@ -56,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
   resultList = document.getElementById("resultList");
 
   initDeptPreference();
+  initPushNotificationsToggle();
 
   const cached = loadCachedData();
   noticesData = cached.noticesData;
@@ -71,15 +77,86 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Background Live Sync
   fetchLiveData().then(live => {
-    if (live.noticesData) noticesData = live.noticesData;
-    if (live.resultsData) resultsData = live.resultsData;
-    rebuildMasterDataset();
-    renderAllViews();
+    let hasUpdates = false;
+    if (live.noticesData && live.noticesData.length > noticesData.length) {
+      noticesData = live.noticesData;
+      hasUpdates = true;
+    }
+    if (live.resultsData && live.resultsData.length > resultsData.length) {
+      resultsData = live.resultsData;
+      hasUpdates = true;
+    }
+    if (hasUpdates) {
+      rebuildMasterDataset();
+      renderAllViews();
+      updateBadges();
+      notifyUpdates(live.noticesData.length - parseInt(localStorage.getItem(LS_SEEN_NOTICES_COUNT) || 0), live.resultsData.length - parseInt(localStorage.getItem(LS_SEEN_RESULTS_COUNT) || 0));
+    }
   });
 });
 
+function initPushNotificationsToggle() {
+  const toggle = document.getElementById("pushNotificationToggle");
+  if (!toggle) return;
+  
+  toggle.checked = localStorage.getItem(LS_NOTIFICATIONS_ENABLED) === "true" && Notification.permission === "granted";
+  
+  toggle.addEventListener("change", async (e) => {
+    if (e.target.checked) {
+      if (!("Notification" in window)) {
+        showToast("Push notifications not supported on this browser.");
+        e.target.checked = false;
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        localStorage.setItem(LS_NOTIFICATIONS_ENABLED, "true");
+        showToast("Push notifications enabled!");
+      } else {
+        localStorage.setItem(LS_NOTIFICATIONS_ENABLED, "false");
+        e.target.checked = false;
+        showToast("Permission denied for notifications.");
+      }
+    } else {
+      localStorage.setItem(LS_NOTIFICATIONS_ENABLED, "false");
+      showToast("Push notifications disabled.");
+    }
+  });
+}
+
+function notifyUpdates(newNotices, newResults) {
+  if (localStorage.getItem(LS_NOTIFICATIONS_ENABLED) === "true" && Notification.permission === "granted") {
+    if (newNotices > 0) new Notification("SASTC Portal", { body: `You have ${newNotices} new notice(s)!` });
+    if (newResults > 0) new Notification("SASTC Portal", { body: `You have ${newResults} new result(s)!` });
+  }
+}
+
+function updateBadges() {
+  const seenNotices = parseInt(localStorage.getItem(LS_SEEN_NOTICES_COUNT) || 0);
+  const seenResults = parseInt(localStorage.getItem(LS_SEEN_RESULTS_COUNT) || 0);
+  
+  const noticesSet = masterDataset.filter(item => !item._isResult);
+  const resultsSet = masterDataset.filter(item => item._isResult);
+
+  const newNotices = Math.max(0, noticesSet.length - seenNotices);
+  const newResults = Math.max(0, resultsSet.length - seenResults);
+
+  const noticeBadge = document.getElementById("navNoticeBadge");
+  const resultBadge = document.getElementById("navResultBadge");
+
+  if (noticeBadge) {
+    noticeBadge.textContent = newNotices;
+    noticeBadge.style.display = newNotices > 0 ? "inline-block" : "none";
+  }
+  if (resultBadge) {
+    resultBadge.textContent = newResults;
+    resultBadge.style.display = newResults > 0 ? "inline-block" : "none";
+  }
+}
+
 function rebuildMasterDataset() {
   masterDataset = indexDataset(noticesData, resultsData);
+  updateBadges();
 }
 
 /**
@@ -125,6 +202,16 @@ function triggerHaptic() {
 function switchTab(tabName) {
   console.log("Switching to tab:", tabName);
   activeTab = tabName;
+
+  if (tabName === "notice") {
+    const noticesSet = masterDataset.filter(item => !item._isResult);
+    localStorage.setItem(LS_SEEN_NOTICES_COUNT, noticesSet.length);
+    updateBadges();
+  } else if (tabName === "result") {
+    const resultsSet = masterDataset.filter(item => item._isResult);
+    localStorage.setItem(LS_SEEN_RESULTS_COUNT, resultsSet.length);
+    updateBadges();
+  }
 
   document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
     btn.classList.toggle("active", btn.getAttribute("data-tab") === tabName);
@@ -301,8 +388,8 @@ function createCardHTML(item, options = {}) {
   }
 
   const shareHtml = options.hideCopy ? "" : `
-    <button type="button" class="btn-share" onclick="copyLink('${pdfUrl}')" title="Copy Link">
-      <i class="fa-regular fa-copy"></i>
+    <button type="button" class="btn-share" onclick="shareLink('${pdfUrl}', '${titleJS}')" title="Share Link">
+      <i class="fa-solid fa-share-nodes"></i>
     </button>
   `;
 

@@ -121,6 +121,24 @@
           </select>
         </div>
       </div>
+
+      <!-- Notifications -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <i class="fa-solid fa-bell"></i>
+          <h3>Notifications</h3>
+        </div>
+        <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <div class="setting-info">
+            <label for="pushNotificationToggle"><strong>Push Notifications</strong></label>
+            <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-muted, #666);">Get alerted about urgent department updates</p>
+          </div>
+          <div class="toggle-switch">
+            <input type="checkbox" id="pushNotificationToggle" style="width: 20px; height: 20px; cursor: pointer;">
+          </div>
+        </div>
+      </div>
+
       <!-- Developer Details -->
       <div class="settings-card dev-card">
         <div class="dev-profile">
@@ -162,6 +180,7 @@
     <button type="button" class="nav-item" data-tab="result">
       <i class="fa-solid fa-chart-column"></i>
       <span>Result</span>
+      <span class="nav-badge" id="navResultBadge" style="display:none;">0</span>
     </button>
 
     <button type="button" class="nav-item" data-tab="settings">

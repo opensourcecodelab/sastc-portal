@@ -509,14 +509,30 @@ body {
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
 }
 
-.nav-item.active span {
+.nav-item.active span:not(.nav-badge) {
   opacity: 1;
   transform: translateY(0);
 }
 
-.nav-item span {
+.nav-item span:not(.nav-badge) {
   opacity: 0.8;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-badge {
+  position: absolute;
+  top: 0;
+  right: 15%;
+  background: var(--accent-red, #ff3b30);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border: 1.5px solid white;
 }
 
 /* Settings View Elements */

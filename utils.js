@@ -136,6 +136,29 @@ export function showToast(message, iconClass = "fa-circle-check") {
   }, 2500);
 }
 
+export async function shareLink(url, title = "SASTC Notice") {
+  if (!url || url === "#") {
+    showToast("No valid link available to share", "fa-circle-exclamation");
+    return;
+  }
+  
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: title,
+        url: url
+      });
+      showToast("Link shared successfully!", "fa-circle-check");
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+         copyLink(url);
+      }
+    }
+  } else {
+    copyLink(url);
+  }
+}
+
 export function copyLink(url) {
   if (!url || url === "#") {
     showToast("No valid link available to copy", "fa-circle-exclamation");
