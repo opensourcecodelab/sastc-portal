@@ -25,6 +25,7 @@ import {
   getTagInfo,
   formatDateString
 } from './utils.js';
+import { initCalculator } from './calculator.js';
 
 window.handleNoticeClick = handleNoticeClick;
 window.handlePdfView = handlePdfView;
@@ -62,6 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initDeptPreference();
   initPushNotificationsToggle();
+  initApiKeysManagement();
 
   const cached = loadCachedData();
   noticesData = cached.noticesData;
@@ -72,6 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initEventListeners();
   initNavTabs();
   initPwaInstall();
+  initCalculator();
 
   renderAllViews();
 
@@ -122,6 +125,76 @@ function initPushNotificationsToggle() {
       showToast("Push notifications disabled.");
     }
   });
+}
+
+function initApiKeysManagement() {
+  const inputEl = document.getElementById("newApiKeyInput");
+  const addBtn = document.getElementById("addApiKeyBtn");
+  const listEl = document.getElementById("apiKeyList");
+  const emptyMsg = document.getElementById("emptyApiKeyMsg");
+
+  if (!inputEl || !addBtn || !listEl) return;
+
+  let apiKeys = JSON.parse(localStorage.getItem("geminiApiKeys")) || [];
+
+  function renderKeys() {
+    if (apiKeys.length === 0) {
+      if (emptyMsg) emptyMsg.style.display = "block";
+      listEl.innerHTML = '';
+      if (emptyMsg) listEl.appendChild(emptyMsg);
+      return;
+    }
+
+    if (emptyMsg) emptyMsg.style.display = "none";
+    listEl.innerHTML = '';
+
+    apiKeys.forEach((key, index) => {
+      const maskedKey = key.substring(0, 8) + "..." + key.substring(key.length - 4);
+      const div = document.createElement("div");
+      div.className = "flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200";
+      div.innerHTML = `
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-key text-gray-400"></i>
+          <span class="font-mono text-sm text-gray-700">${maskedKey}</span>
+        </div>
+        <button class="text-red-400 hover:text-red-600 delete-key-btn p-1 transition-colors" data-idx="${index}" title="Delete Key">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      `;
+      listEl.appendChild(div);
+    });
+
+    listEl.querySelectorAll('.delete-key-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = e.currentTarget.getAttribute('data-idx');
+        apiKeys.splice(idx, 1);
+        localStorage.setItem("geminiApiKeys", JSON.stringify(apiKeys));
+        renderKeys();
+        showToast("API key removed");
+      });
+    });
+  }
+
+  addBtn.addEventListener("click", () => {
+    const newKey = inputEl.value.trim();
+    if (!newKey) {
+      showToast("Please enter an API key");
+      return;
+    }
+    
+    if (apiKeys.includes(newKey)) {
+      showToast("Key already exists");
+      return;
+    }
+
+    apiKeys.push(newKey);
+    localStorage.setItem("geminiApiKeys", JSON.stringify(apiKeys));
+    inputEl.value = "";
+    renderKeys();
+    showToast("API key added successfully");
+  });
+
+  renderKeys();
 }
 
 function notifyUpdates(newNotices, newResults) {
@@ -175,6 +248,7 @@ function initDeptPreference() {
         localStorage.setItem(LS_ACTIVE_DEPT, activeDept);
       }
 
+      window.dispatchEvent(new Event('sastc_dept_changed'));
       renderAllViews();
       showToast(`Filter set to ${deptPreference}`);
     });
