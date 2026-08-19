@@ -65,7 +65,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initSecurityProtections();
   initEventListeners();
   initNavTabs();
-  initPwaInstall();
 
   renderAllViews();
 
@@ -164,7 +163,7 @@ function renderHomeView() {
     if (heroDate) heroDate.innerHTML = `<i class="fa-regular fa-clock"></i> ${heroItem.date || 'Recent'}`;
 
     if (heroBtnView) {
-      const url = formatPdfUrl(heroItem.pdf || heroItem.url || heroItem.pdf_url || heroItem.link || heroItem.pdfUrl || "#");
+      const url = formatPdfUrl(heroItem.url || heroItem.pdf_url || "#");
       heroBtnView.onclick = (e) => {
         triggerHaptic();
         handleNoticeClick(e, url, heroItem.title);
@@ -286,7 +285,7 @@ function createCardHTML(item, options = {}) {
   const displayBadge = isResult ? "RESULT" : (item._deptCode || detectDeptCode(`${item.department || ''} ${item.title || ''}`));
   const deptIcon = getDeptIcon(displayBadge);
 
-  const rawLink = item.pdf || item.url || item.pdf_url || item.link || item.pdfUrl || "";
+  const rawLink = item.url || item.pdf_url || item.link || item.pdfUrl || "";
   const isTextOnly = !rawLink || rawLink === "#";
   const pdfUrl = isTextOnly ? "#" : formatPdfUrl(rawLink);
   
@@ -353,56 +352,6 @@ function createCardHTML(item, options = {}) {
 }
 
 /**
- * PWA Install Prompt Handler
- */
-function initPwaInstall() {
-  const installBanner = document.getElementById("pwaInstallBanner");
-  const installBtn = document.getElementById("btnInstallApp");
-  const closeBtn = document.getElementById("btnCloseInstall");
-
-  // Listen for beforeinstallprompt event
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-
-    // Check if dismissed before in this session
-    if (!sessionStorage.getItem("pwa_install_dismissed") && installBanner) {
-      setTimeout(() => {
-        installBanner.classList.add("show");
-      }, 2000); // 2 second delay for smooth entrance
-    }
-  });
-
-  // Handle Install Button Click
-  if (installBtn) {
-    installBtn.addEventListener("click", async () => {
-      if (!deferredPrompt) return;
-      installBanner.classList.remove("show");
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        showToast("SASTC Portal installed successfully!");
-      }
-      deferredPrompt = null;
-    });
-  }
-
-  // Handle Dismiss Button Click
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      if (installBanner) installBanner.classList.remove("show");
-      sessionStorage.setItem("pwa_install_dismissed", "true");
-    });
-  }
-
-  window.addEventListener("appinstalled", () => {
-    if (installBanner) installBanner.classList.remove("show");
-    deferredPrompt = null;
-    showToast("Application is now available on Home Screen");
-  });
-}
-
-/**
  * Event Listeners
  */
 function initEventListeners() {
@@ -415,6 +364,7 @@ function initEventListeners() {
     });
   }
 
+
   const bottomNav = document.querySelector(".bottom-nav");
   let lastScrollY = window.scrollY;
   window.addEventListener("scroll", () => {
@@ -426,7 +376,6 @@ function initEventListeners() {
     }
     lastScrollY = window.scrollY;
   }, { passive: true });
-
   const headerOfflineIcon = document.getElementById("headerOfflineIcon");
   function updateOnlineStatus() {
     if (headerOfflineIcon) {
