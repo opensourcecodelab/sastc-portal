@@ -65,6 +65,19 @@ document.addEventListener("DOMContentLoaded", () => {
   initPushNotificationsToggle();
   initApiKeysManagement();
 
+  const LS_SEEN_NOTICES_COUNT = "sastc_seen_notices_count";
+  const LS_SEEN_RESULTS_COUNT = "sastc_seen_results_count";
+
+  // Migrate old storage keys to new format to prevent sudden large badge numbers
+  if (localStorage.getItem(LS_SEEN_NOTICES_COUNT)) {
+    localStorage.setItem("seen_notices_ALL", localStorage.getItem(LS_SEEN_NOTICES_COUNT));
+    localStorage.removeItem(LS_SEEN_NOTICES_COUNT);
+  }
+  if (localStorage.getItem(LS_SEEN_RESULTS_COUNT)) {
+    localStorage.setItem("seen_results_ALL", localStorage.getItem(LS_SEEN_RESULTS_COUNT));
+    localStorage.removeItem(LS_SEEN_RESULTS_COUNT);
+  }
+
   const cached = loadCachedData();
   noticesData = cached.noticesData;
   resultsData = cached.resultsData;
@@ -93,7 +106,16 @@ document.addEventListener("DOMContentLoaded", () => {
       rebuildMasterDataset();
       renderAllViews();
       updateBadges();
-      notifyUpdates(live.noticesData.length - parseInt(localStorage.getItem(LS_SEEN_NOTICES_COUNT) || 0), live.resultsData.length - parseInt(localStorage.getItem(LS_SEEN_RESULTS_COUNT) || 0));
+      
+      const seenNoticesKey = `seen_notices_${deptPreference}`;
+      const seenResultsKey = `seen_results_${deptPreference}`;
+      const seenNotices = parseInt(localStorage.getItem(seenNoticesKey) || 0);
+      const seenResults = parseInt(localStorage.getItem(seenResultsKey) || 0);
+      
+      const noticesSet = getFilteredNoticesSet();
+      const resultsSet = getFilteredResultsSet();
+
+      notifyUpdates(Math.max(0, noticesSet.length - seenNotices), Math.max(0, resultsSet.length - seenResults));
     }
   });
 });
@@ -130,14 +152,26 @@ function initPushNotificationsToggle() {
 function initApiKeysManagement() {
   const inputEl = document.getElementById("newApiKeyInput");
   const addBtn = document.getElementById("addApiKeyBtn");
+  const useBuiltInBtn = document.getElementById("useBuiltInKeyBtn");
   const listEl = document.getElementById("apiKeyList");
   const emptyMsg = document.getElementById("emptyApiKeyMsg");
+  const builtInWarning = document.getElementById("builtInKeyWarning");
 
   if (!inputEl || !addBtn || !listEl) return;
 
   let apiKeys = JSON.parse(localStorage.getItem("geminiApiKeys")) || [];
+  const BUILT_IN_KEY = atob("QVEuQWI4Uk42TF9hRmRQNVhGYldodDFTUEU3UkI5MGZyUmJOLW1UTGtuSm03Z2ExbDZIV1E=");
 
   function renderKeys() {
+    const hasCustomKey = apiKeys.some(key => key !== BUILT_IN_KEY);
+    if (builtInWarning) {
+      if (hasCustomKey) {
+        builtInWarning.classList.add("hidden");
+      } else {
+        builtInWarning.classList.remove("hidden");
+      }
+    }
+
     if (apiKeys.length === 0) {
       if (emptyMsg) emptyMsg.style.display = "block";
       listEl.innerHTML = '';
@@ -194,6 +228,21 @@ function initApiKeysManagement() {
     showToast("API key added successfully");
   });
 
+  if (useBuiltInBtn) {
+    useBuiltInBtn.addEventListener("click", () => {
+      // Decode the obfuscated key string
+      const builtInKey = BUILT_IN_KEY;
+      if (!apiKeys.includes(builtInKey)) {
+        apiKeys.push(builtInKey);
+        localStorage.setItem("geminiApiKeys", JSON.stringify(apiKeys));
+        renderKeys();
+        showToast("Built-in key added");
+      } else {
+        showToast("Built-in key is already active");
+      }
+    });
+  }
+
   renderKeys();
 }
 
@@ -204,12 +253,38 @@ function notifyUpdates(newNotices, newResults) {
   }
 }
 
+function getFilteredNoticesSet() {
+  let filtered = masterDataset.filter(item => !item._isResult);
+  if (deptPreference !== "ALL") {
+    filtered = filtered.filter(item => item._deptCode === deptPreference);
+  }
+  return filtered;
+}
+
+function getFilteredResultsSet() {
+  let results = masterDataset.filter(item => {
+    if (!item._isResult) return false;
+    const text = `${item.title || ''} ${item.department || ''} ${item.category || ''}`.toUpperCase();
+    return /\bSASTC\b/i.test(text);
+  });
+  if (deptPreference !== "ALL") {
+    results = results.filter(item => {
+      const text = `${item.title || ''} ${item.department || ''} ${item.category || ''}`.toUpperCase();
+      return new RegExp(`\\b${deptPreference}\\b`, "i").test(text);
+    });
+  }
+  return results;
+}
+
 function updateBadges() {
-  const seenNotices = parseInt(localStorage.getItem(LS_SEEN_NOTICES_COUNT) || 0);
-  const seenResults = parseInt(localStorage.getItem(LS_SEEN_RESULTS_COUNT) || 0);
+  const seenNoticesKey = `seen_notices_${deptPreference}`;
+  const seenResultsKey = `seen_results_${deptPreference}`;
   
-  const noticesSet = masterDataset.filter(item => !item._isResult);
-  const resultsSet = masterDataset.filter(item => item._isResult);
+  const seenNotices = parseInt(localStorage.getItem(seenNoticesKey) || 0);
+  const seenResults = parseInt(localStorage.getItem(seenResultsKey) || 0);
+  
+  const noticesSet = getFilteredNoticesSet();
+  const resultsSet = getFilteredResultsSet();
 
   const newNotices = Math.max(0, noticesSet.length - seenNotices);
   const newResults = Math.max(0, resultsSet.length - seenResults);
@@ -248,8 +323,19 @@ function initDeptPreference() {
         localStorage.setItem(LS_ACTIVE_DEPT, activeDept);
       }
 
+      // If we are currently viewing the notice or result tab, mark the newly filtered items as read
+      const seenNoticesKey = `seen_notices_${deptPreference}`;
+      const seenResultsKey = `seen_results_${deptPreference}`;
+      
+      if (activeTab === "notice") {
+        localStorage.setItem(seenNoticesKey, getFilteredNoticesSet().length);
+      } else if (activeTab === "result") {
+        localStorage.setItem(seenResultsKey, getFilteredResultsSet().length);
+      }
+
       window.dispatchEvent(new Event('sastc_dept_changed'));
       renderAllViews();
+      updateBadges();
       showToast(`Filter set to ${deptPreference}`);
     });
   }
@@ -277,13 +363,16 @@ function switchTab(tabName) {
   console.log("Switching to tab:", tabName);
   activeTab = tabName;
 
+  const seenNoticesKey = `seen_notices_${deptPreference}`;
+  const seenResultsKey = `seen_results_${deptPreference}`;
+
   if (tabName === "notice") {
-    const noticesSet = masterDataset.filter(item => !item._isResult);
-    localStorage.setItem(LS_SEEN_NOTICES_COUNT, noticesSet.length);
+    const noticesSet = getFilteredNoticesSet();
+    localStorage.setItem(seenNoticesKey, noticesSet.length);
     updateBadges();
   } else if (tabName === "result") {
-    const resultsSet = masterDataset.filter(item => item._isResult);
-    localStorage.setItem(LS_SEEN_RESULTS_COUNT, resultsSet.length);
+    const resultsSet = getFilteredResultsSet();
+    localStorage.setItem(seenResultsKey, resultsSet.length);
     updateBadges();
   }
 

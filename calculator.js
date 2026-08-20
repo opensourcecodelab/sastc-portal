@@ -38,6 +38,8 @@ export function initCalculator() {
     return ['CSE', 'AG', 'BBA'].includes(savedDept) ? savedDept : 'CSE';
   }
 
+  let expandedHistoryIdx = null;
+
   function renderHistory() {
     if (semesterHistory.length === 0) {
       emptyHistoryMsg.style.display = 'block';
@@ -58,35 +60,117 @@ export function initCalculator() {
       totalCredits += sem.totalCredits;
       totalPoints += (sem.totalCredits * sem.gpa);
 
+      let coursesHtml = '';
+      if (sem.courses && sem.courses.length > 0) {
+        coursesHtml = sem.courses.map((c, cIdx) => `
+          <div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 gap-2 mb-1.5">
+            <div class="font-medium text-gray-700 flex-1 truncate" title="${c.code}">${c.code}</div>
+            <input type="number" step="0.5" min="0" max="6" class="w-16 p-1 border border-indigo-200 rounded text-sm text-center outline-none focus:ring-1 focus:ring-indigo-500 course-cr-input" data-cidx="${cIdx}" value="${c.credits}">
+            <select class="w-[70px] p-1 border border-indigo-200 rounded text-sm bg-white font-bold text-indigo-600 outline-none focus:ring-1 focus:ring-indigo-500 course-grade-select" data-cidx="${cIdx}">
+              ${Object.keys(gradePoints).map(g => `<option value="${g}" ${g === c.grade ? 'selected' : ''}>${g}</option>`).join('')}
+            </select>
+          </div>
+        `).join('');
+      } else {
+        coursesHtml = `<div class="text-xs text-gray-500 italic p-2 text-center">No detailed course data available.</div>`;
+      }
+
       const div = document.createElement('div');
-      div.className = 'flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-100 text-sm';
+      div.className = 'flex flex-col bg-white rounded-lg border border-gray-200 text-sm overflow-hidden shadow-sm transition-all mb-3';
+      const isExpanded = expandedHistoryIdx === index;
+      
       div.innerHTML = `
-        <div>
-          <span class="font-bold text-gray-700">${sem.dept} L${sem.level} S${sem.semester}</span>
-          <span class="text-gray-500 ml-2">Cr: ${sem.totalCredits}</span>
+        <div class="flex justify-between items-center p-3 hover:bg-indigo-50/30 transition-colors cursor-pointer history-header" data-idx="${index}">
+          <div>
+            <span class="font-bold text-gray-800">${sem.dept} L${sem.level} S${sem.semester}</span>
+            <span class="text-gray-500 ml-2 text-xs font-medium bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">Cr: ${sem.totalCredits}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="font-black text-indigo-600 text-[15px] gpa-display">${sem.gpa.toFixed(2)}</span>
+            <button class="text-gray-400 hover:text-indigo-600 transition-colors edit-sem-btn p-1" data-idx="${index}" title="Edit Courses">
+              <i class="fa-solid ${isExpanded ? 'fa-chevron-up text-indigo-600' : 'fa-pencil'}"></i>
+            </button>
+            <button class="text-red-300 hover:text-red-500 transition-colors delete-sem-btn p-1" data-idx="${index}" title="Delete Semester">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
         </div>
-        <div class="flex items-center gap-3">
-          <span class="font-bold text-indigo-600">${sem.gpa.toFixed(2)}</span>
-          <button class="text-red-400 hover:text-red-600 delete-sem-btn" data-idx="${index}">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
+        <div class="course-edit-panel ${isExpanded ? 'block' : 'hidden'} p-3 border-t border-indigo-100 bg-white">
+          <div class="flex items-center gap-2 mb-3 text-[11px] font-bold text-indigo-400 uppercase tracking-wider">
+            <i class="fa-solid fa-layer-group"></i> Update Courses
+          </div>
+          ${coursesHtml}
         </div>
       `;
+      
+      const editBtn = div.querySelector('.edit-sem-btn');
+      const headerClick = div.querySelector('.history-header');
+      
+      const toggleExpand = (e) => {
+        if (e.target.closest('.delete-sem-btn')) return;
+        expandedHistoryIdx = isExpanded ? null : index;
+        renderHistory();
+      };
+      
+      headerClick.addEventListener('click', toggleExpand);
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleExpand(e);
+      });
+
+      if (sem.courses && sem.courses.length > 0) {
+        div.querySelectorAll('.course-cr-input').forEach(input => {
+          input.addEventListener('change', (e) => {
+            const cIdx = parseInt(e.target.getAttribute('data-cidx'));
+            const newCr = parseFloat(e.target.value) || 0;
+            sem.courses[cIdx].credits = newCr;
+            recalculateSemester(index);
+          });
+        });
+        div.querySelectorAll('.course-grade-select').forEach(select => {
+          select.addEventListener('change', (e) => {
+            const cIdx = parseInt(e.target.getAttribute('data-cidx'));
+            sem.courses[cIdx].grade = e.target.value;
+            recalculateSemester(index);
+          });
+        });
+      }
+
+      const deleteBtn = div.querySelector('.delete-sem-btn');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        semesterHistory.splice(index, 1);
+        if (expandedHistoryIdx === index) expandedHistoryIdx = null;
+        else if (expandedHistoryIdx > index) expandedHistoryIdx--;
+        saveHistory();
+        renderHistory();
+      });
+
       historyList.appendChild(div);
     });
 
     const cgpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : "0.00";
     cumCreditsDisplay.textContent = totalCredits.toFixed(2);
     cumCgpaDisplay.textContent = cgpa;
+  }
 
-    document.querySelectorAll('.delete-sem-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const idx = e.currentTarget.getAttribute('data-idx');
-        semesterHistory.splice(idx, 1);
-        saveHistory();
-        renderHistory();
-      });
+  function recalculateSemester(index) {
+    const sem = semesterHistory[index];
+    if (!sem.courses || sem.courses.length === 0) return;
+    
+    let totalCr = 0;
+    let totalPts = 0;
+    sem.courses.forEach(c => {
+      const gp = gradePoints[c.grade] || 0;
+      totalCr += c.credits;
+      totalPts += (c.credits * gp);
     });
+    
+    sem.totalCredits = totalCr;
+    sem.gpa = totalCr > 0 ? (totalPts / totalCr) : 0;
+    
+    saveHistory();
+    renderHistory();
   }
 
   function saveHistory() {
@@ -164,6 +248,21 @@ export function initCalculator() {
   [calcLevel, calcSemester].forEach(el => {
     if (el) el.addEventListener('change', loadCourses);
   });
+
+  const toggleCoursesBtn = document.getElementById("toggleCoursesBtn");
+  const toggleCoursesIcon = document.getElementById("toggleCoursesIcon");
+  const courseContentWrapper = document.getElementById("courseContentWrapper");
+
+  if (toggleCoursesBtn) {
+    toggleCoursesBtn.addEventListener('click', () => {
+      courseContentWrapper.classList.toggle('hidden');
+      if (courseContentWrapper.classList.contains('hidden')) {
+        toggleCoursesIcon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+      } else {
+        toggleCoursesIcon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+      }
+    });
+  }
 
   // Listen for custom event from settings to reload if department changes
   window.addEventListener('sastc_dept_changed', () => {
@@ -266,7 +365,8 @@ export function initCalculator() {
               termGpa: gpa,
               currentSemCourses: currentCourses,
               level: calcLevel.value,
-              semester: calcSemester.value
+              semester: calcSemester.value,
+              history: semesterHistory
             })
           });
 
@@ -288,9 +388,31 @@ export function initCalculator() {
             success = true;
             break;
           } else if (data.text) {
-            // simple formatting for bullets
-            const formattedText = data.text.replace(/\n/g, '<br>').replace(/\* \*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // format standard markdown headers and bullets cleanly
+            let formattedText = data.text
+              .replace(/## (.*?)\n/g, '<h3 class="font-bold text-lg mt-4 mb-2">$1</h3>')
+              .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+              .replace(/\* (.*?)(?=\n|$)/g, '<li class="ml-4 list-disc">$1</li>')
+              .replace(/\n/g, '<br>');
+              
+            // cleanup stray breaks inside lists
+            formattedText = formattedText.replace(/<\/li><br>/g, '</li>');
+
             aiAdvisorText.innerHTML = formattedText;
+            
+            // Save to localStorage as structured history
+            const analysisHistory = JSON.parse(localStorage.getItem('sastc_advisor_history')) || [];
+            analysisHistory.push({
+              date: new Date().toISOString(),
+              level: calcLevel.value,
+              semester: calcSemester.value,
+              text: data.text,
+              html: formattedText
+            });
+            localStorage.setItem('sastc_advisor_history', JSON.stringify(analysisHistory));
+            
+            renderAdvisorHistory(); // refresh the view
+
             success = true;
             break;
           }
@@ -305,9 +427,77 @@ export function initCalculator() {
     });
   }
 
+  // History functionality
+  let expandedAdvisorHistoryIdx = null;
+
+  function renderAdvisorHistory() {
+    const analysisHistory = JSON.parse(localStorage.getItem('sastc_advisor_history')) || [];
+    const historySection = document.getElementById('advisorHistorySection');
+    const historyList = document.getElementById('advisorHistoryList');
+    
+    if (analysisHistory.length > 0) {
+      if (historySection) historySection.classList.remove('hidden');
+      if (historyList) {
+        historyList.innerHTML = '';
+        analysisHistory.slice().reverse().forEach((item, reverseIndex) => {
+          const originalIndex = analysisHistory.length - 1 - reverseIndex;
+          const isExpanded = expandedAdvisorHistoryIdx === originalIndex;
+          const dateStr = new Date(item.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+          const div = document.createElement('div');
+          div.className = 'bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-all';
+          div.innerHTML = `
+            <div class="flex justify-between items-center p-3 cursor-pointer hover:bg-indigo-50/50 transition-colors advisor-history-header" data-idx="${originalIndex}">
+              <div>
+                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">L${item.level} S${item.semester}</span>
+                <span class="text-xs text-gray-500 ml-2">${dateStr}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="text-red-300 hover:text-red-500 transition-colors p-1 delete-insight-btn" title="Delete Insight">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" title="Toggle Details">
+                  <i class="fa-solid ${isExpanded ? 'fa-chevron-up text-indigo-600' : 'fa-chevron-down'}"></i>
+                </button>
+              </div>
+            </div>
+            <div class="advisor-history-body ${isExpanded ? 'block' : 'hidden'} p-3 border-t border-gray-100 text-sm text-gray-700 prose prose-sm max-w-none bg-gray-50">
+              ${item.html}
+            </div>
+          `;
+
+          const headerClick = div.querySelector('.advisor-history-header');
+          headerClick.addEventListener('click', (e) => {
+            if (e.target.closest('.delete-insight-btn')) return;
+            expandedAdvisorHistoryIdx = isExpanded ? null : originalIndex;
+            renderAdvisorHistory();
+          });
+
+          const deleteBtn = div.querySelector('.delete-insight-btn');
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            analysisHistory.splice(originalIndex, 1);
+            localStorage.setItem('sastc_advisor_history', JSON.stringify(analysisHistory));
+            if (expandedAdvisorHistoryIdx === originalIndex) {
+              expandedAdvisorHistoryIdx = null;
+            } else if (expandedAdvisorHistoryIdx > originalIndex) {
+              expandedAdvisorHistoryIdx--;
+            }
+            renderAdvisorHistory();
+          });
+
+          historyList.appendChild(div);
+        });
+      }
+    } else {
+      if (historySection) historySection.classList.add('hidden');
+    }
+  }
+
   // Init
   if (calcLevel) {
     loadCourses();
     renderHistory();
+    renderAdvisorHistory();
   }
 }

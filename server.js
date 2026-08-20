@@ -17,21 +17,38 @@ app.post('/api/advisor', async (req, res) => {
       return res.status(400).json({ error: "Gemini API Key is missing. Please set it in the app's Settings menu." });
     }
 
-    const { cgpa, termGpa, currentSemCourses, level, semester } = req.body;
+    const { cgpa, termGpa, currentSemCourses, level, semester, history } = req.body;
     
-    const prompt = `You are an AI Academic Advisor for a student at HSTU (Hajee Mohammad Danesh Science and Technology University). 
-    A student has provided their current semester (Level ${level} Semester ${semester}) details:
+    let historyContext = "";
+    if (history && history.length > 0) {
+      historyContext = "\nSaved Academic History (Chronological):\n" + history.map(h => `- Level ${h.level} Semester ${h.semester}: Term GPA ${h.termGpa}, Credits ${h.credits}`).join("\n");
+    }
+
+    const prompt = `You are an AI Academic Advisor for a student at HSTU. 
+    The student has provided their current semester details (Level ${level} Semester ${semester}) AND their entire saved academic history.
+
+    Current Semester:
     - Cumulative CGPA: ${cgpa || '0.00'}
     - Current Semester GPA: ${termGpa || '0.00'}
     - Current Semester Courses & Grades: ${JSON.stringify(currentSemCourses || [])}
+    ${historyContext}
     
-    Task:
-    1. Analyze their performance for this semester.
-    2. Identify weak/low-grade courses (e.g., grades below B or C) that might need a retake or improvement.
-    3. Highlight strong areas where they excelled.
-    4. Provide actionable, specific tips to boost their CGPA.
+    Task & Guidelines:
+    1. Conduct a deep and thorough analysis of all available semesters in chronological order.
+    2. Analyze each semester in a separate section. For each semester:
+       - **Strengths:** Analyze specific high grades and the subjects where the student excelled. What does this say about their skills?
+       - **Weaknesses & Bottlenecks:** Identify low grades or struggling areas. How did these specific courses affect the term GPA?
+       - **Performance Trend:** Compare this semester's performance to the previous one (if applicable). Did it drop, improve, or remain stagnant? Why?
+    3. Provide actionable, strategic advice for course selection or study habits based on their specific weaknesses.
+    4. After covering all individual semesters, provide an in-depth "Overall Progress & Final Verdict" section at the end. Predict their future trajectory if current habits continue and give a motivational roadmap to achieve a higher CGPA.
     
-    Tone: Write in a simple, highly encouraging mix of Bengali and English (Banglish/Bengali text mixed with English terms). Format your response using clean text with simple bullet points (do not use complex markdown that HTML can't render easily, simple asterisks for bold and standard bullet points are fine). Keep it concise but impactful.`;
+    Formatting Rules:
+    - Make the analysis detailed, descriptive, and insightful. Avoid superficial one-liners.
+    - Do NOT use unnecessary decorative symbols, extra hyphens, or random characters.
+    - Keep the layout clean, structured, and easy to read.
+    - Use standard bold headers (e.g., **Level 1 Semester 1**) and simple bullet points only.
+    - Keep the language clear, highly motivating, and direct (use a natural mix of Bengali and English / Banglish).`;
+
     
     const ai = new GoogleGenAI({
       apiKey: activeKey,
@@ -43,7 +60,7 @@ app.post('/api/advisor', async (req, res) => {
     });
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
+      model: "gemini-3.6-flash",
       contents: prompt,
       config: {
         systemInstruction: "You are an empathetic, motivating academic advisor for university students. Communicate in a mix of Bengali and English. Be structured, concise, and highly relevant."
