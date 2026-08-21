@@ -379,9 +379,9 @@ export function initCalculator() {
 
           const data = await res.json();
           if (data.error) {
-            if (res.status === 400 && data.error.includes("Invalid")) {
-              console.warn("Invalid key encountered:", key);
-              lastErrorMsg = "Some API keys are invalid.";
+            if ((res.status === 400 && data.error.includes("Invalid")) || res.status === 403) {
+              console.warn("Invalid or denied key encountered:", key);
+              lastErrorMsg = data.error;
               continue; // try next key
             }
             aiAdvisorText.innerHTML = `<span class="text-red-500 font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> ${data.error}</span>`;

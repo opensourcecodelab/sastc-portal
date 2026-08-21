@@ -152,26 +152,14 @@ function initPushNotificationsToggle() {
 function initApiKeysManagement() {
   const inputEl = document.getElementById("newApiKeyInput");
   const addBtn = document.getElementById("addApiKeyBtn");
-  const useBuiltInBtn = document.getElementById("useBuiltInKeyBtn");
   const listEl = document.getElementById("apiKeyList");
   const emptyMsg = document.getElementById("emptyApiKeyMsg");
-  const builtInWarning = document.getElementById("builtInKeyWarning");
 
   if (!inputEl || !addBtn || !listEl) return;
 
   let apiKeys = JSON.parse(localStorage.getItem("geminiApiKeys")) || [];
-  const BUILT_IN_KEY = atob("QVEuQWI4Uk42TF9hRmRQNVhGYldodDFTUEU3UkI5MGZyUmJOLW1UTGtuSm03Z2ExbDZIV1E=");
 
   function renderKeys() {
-    const hasCustomKey = apiKeys.some(key => key !== BUILT_IN_KEY);
-    if (builtInWarning) {
-      if (hasCustomKey) {
-        builtInWarning.classList.add("hidden");
-      } else {
-        builtInWarning.classList.remove("hidden");
-      }
-    }
-
     if (apiKeys.length === 0) {
       if (emptyMsg) emptyMsg.style.display = "block";
       listEl.innerHTML = '';
@@ -185,7 +173,7 @@ function initApiKeysManagement() {
     apiKeys.forEach((key, index) => {
       const maskedKey = key.substring(0, 8) + "..." + key.substring(key.length - 4);
       const div = document.createElement("div");
-      div.className = "flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200";
+      div.className = "flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-[#85bdf0]";
       div.innerHTML = `
         <div class="flex items-center gap-3">
           <i class="fa-solid fa-key text-gray-400"></i>
@@ -227,21 +215,6 @@ function initApiKeysManagement() {
     renderKeys();
     showToast("API key added successfully");
   });
-
-  if (useBuiltInBtn) {
-    useBuiltInBtn.addEventListener("click", () => {
-      // Decode the obfuscated key string
-      const builtInKey = BUILT_IN_KEY;
-      if (!apiKeys.includes(builtInKey)) {
-        apiKeys.push(builtInKey);
-        localStorage.setItem("geminiApiKeys", JSON.stringify(apiKeys));
-        renderKeys();
-        showToast("Built-in key added");
-      } else {
-        showToast("Built-in key is already active");
-      }
-    });
-  }
 
   renderKeys();
 }
@@ -457,6 +430,7 @@ function renderHomeView() {
         });
 
         sastcNoticeList.innerHTML = filteredSastc.map(item => createCardHTML(item, { hideCopy: true })).join("");
+        observeCards();
       })
       .catch(err => {
         sastcNoticeList.innerHTML = `
@@ -493,6 +467,7 @@ function renderNotices() {
   }
 
   noticeList.innerHTML = filtered.map(item => createCardHTML(item)).join("");
+  observeCards();
 }
 
 /**
@@ -526,6 +501,7 @@ function renderResultsView() {
   }
 
   resultList.innerHTML = results.map(item => createCardHTML(item)).join("");
+  observeCards();
 }
 
 /**
@@ -572,7 +548,7 @@ function createCardHTML(item, options = {}) {
   const noticeArg = textContentBase64 ? "'" + textContentBase64 + "'" : "null";
 
   return `
-    <div class="card">
+    <div class="card card-animate">
       <div class="card-header">
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <span class="badge-dept">
@@ -666,13 +642,15 @@ function initEventListeners() {
   }
 
   const bottomNav = document.querySelector(".bottom-nav");
+  const appHeader = document.querySelector(".app-header");
   let lastScrollY = window.scrollY;
   window.addEventListener("scroll", () => {
-    if (!bottomNav) return;
     if (window.scrollY > lastScrollY && window.scrollY > 50) {
-      bottomNav.classList.add("nav-hidden");
+      if (bottomNav) bottomNav.classList.add("nav-hidden");
+      if (appHeader) appHeader.classList.add("header-hidden");
     } else {
-      bottomNav.classList.remove("nav-hidden");
+      if (bottomNav) bottomNav.classList.remove("nav-hidden");
+      if (appHeader) appHeader.classList.remove("header-hidden");
     }
     lastScrollY = window.scrollY;
   }, { passive: true });
@@ -686,4 +664,20 @@ function initEventListeners() {
   window.addEventListener("online", updateOnlineStatus);
   window.addEventListener("offline", updateOnlineStatus);
   updateOnlineStatus();
+}
+
+// Vertical Card Sliding Animation
+const scrollObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      scrollObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -20px 0px' });
+
+function observeCards() {
+  document.querySelectorAll('.card-animate:not(.visible)').forEach(card => {
+    scrollObserver.observe(card);
+  });
 }

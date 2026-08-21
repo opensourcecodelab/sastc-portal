@@ -78,6 +78,11 @@ app.post('/api/advisor', async (req, res) => {
       console.error("Gemini API Error: Invalid API key provided.");
       return res.status(400).json({ error: "Invalid Gemini API Key provided. Please check your Settings." });
     }
+
+    if (error.message && (error.message.includes("403") || error.message.includes("PERMISSION_DENIED") || error.message.includes("denied access"))) {
+      console.error("Gemini API Error: Project has been denied access (403).");
+      return res.status(403).json({ error: "API Key Permission Denied (403). Your project may be restricted. Please add a new API Key in Settings." });
+    }
     
     console.error("Gemini API Error:", error);
     res.status(500).json({ error: "Could not generate advice at this time." });
